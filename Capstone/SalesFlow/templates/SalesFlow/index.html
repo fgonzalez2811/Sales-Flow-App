@@ -1,0 +1,562 @@
+{% extends "SalesFlow/layout.html" %}
+
+{% load static %}
+
+{% block script %}
+<script src="{% static 'SalesFlow/index.js' %}"></script>
+{% endblock %}
+
+{% block body %}
+
+<!-- Modals -->
+<div id="delete-year-modal" class="modal fade" tabindex="-1" aria-labelledby="delete-year-modal" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-6 fw-bold text-center" id="exampleModalLabel">¿Está seguro que desea eliminar el año
+          actual?</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-start fw-light">
+        Todos los datos del año {{current_year}}, incluidos los datos de todos los meses se eliminarán de forma
+        permanente.
+      </div>
+      <div class="modal-footer d-flex justify-content-center">
+        <a href="{% url 'delete_year' year=current_year  %}"><button type="button"
+            class="btn btn-danger">Eliminar</button></a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atras</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if existing_years %}
+
+<div class="container p-3" style="margin-top:80px;">
+  <div class="row year-row" id="year-row">
+    <div class="col-12 col-md-6">
+      <div class="card year info-card customers-card" id="year-card">
+        <div class="card-body">
+
+          <h5 class="col-9 card-title ps-3 d-flex align-items-center">
+            <i class="bi-calendar-week pe-2"></i>{{current_year}} <span class="ps-2"> | Año actual</span><a
+              data-bs-toggle='modal' data-bs-target="#delete-year-modal" class="d-flex px-2"><i class="bi-x-circle-fill"
+                style="color:#e71414d6; font-size:12px;"></i></a>
+          </h5>
+
+          <div class="d-flex align-items-center">
+            <div class="row">
+              <div class="dropdown col py-2">
+                <button type="button" class="dropdown-toggle" data-bs-toggle="dropdown">Cambiar año</button>
+                <ul id="year-list" class="dropdown-menu">
+                  {% for year in year_list %}
+                  <li><a class="dropdown-item" id="year-{{year}}" data-year="{{year}}" href="{{year}}">{{year}}</a></li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="col py-2">
+                <a href="{% url 'new_year' %}">
+                  <button type="button" style="background-color: #0eb90e; color:white;">Crear año</button>
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row py-3">
+    <form class="col-2" action="{% url 'excel' %}" id='excel-form' method="post">
+      {% csrf_token %}
+      <input type="hidden" id='excel-year' name='excel-year' value="{{current_year}}"></input>
+      <button type="submit" class="btn download-btn" style="width:150px;">
+        Excel
+        <i class="bi-download ps-2"></i>
+      </button>
+    </form>
+  </div>
+  <div class="row appear" id="months-row" style="opacity:0;">
+    {% for month in months %}
+    <div id="{{month.month}}-card" class="col-12 col-lg-4 col-md-6 pt-2 month-div" data-month-name="{{month.month}}" data-month_id="{{month.id}}"
+      data-factcurrent="{{month.fact_current}}" data-optcurrent="{{month.opt_current}}"
+      data-monthname="{{month.month}}">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title text-start"> <i class="bi-calendar-check pe-2"></i>{{month.month}}</h5>
+          <!-- Navigation Tabs -->
+          <ul class="nav nav-tabs nav-tabs-bordered justify-content-center" id="borderedTab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="{{month.month}}-oport-tab" data-bs-toggle="tab"
+                data-bs-target="#{{month.month}}-oport" type="button" role="tab" aria-controls="home"
+                aria-selected="true">Oport.</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="{{month.month}}-ventas-tab" data-bs-toggle="tab"
+                data-bs-target="#{{month.month}}-ventas" type="button" role="tab" aria-controls="profile"
+                aria-selected="false" tabindex="-1">Ventas</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="{{month.month}}-fact-tab" data-bs-toggle="tab"
+                data-bs-target="#{{month.month}}-fact" type="button" role="tab" aria-controls="contact"
+                aria-selected="false" tabindex="-1">Facturas</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="{{month.month}}-efect-tab" data-bs-toggle="tab"
+                data-bs-target="#{{month.month}}-efect" type="button" role="tab" aria-controls="td"
+                aria-selected="false" tabindex="-1">Efectividad</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="{{month.month}}-td-tab" data-bs-toggle="tab"
+                data-bs-target="#{{month.month}}-td" type="button" role="tab" aria-controls="efect"
+                aria-selected="false" tabindex="-1">Test drive</button>
+            </li>
+          </ul>
+          <!-- Tabs contents -->
+          <div class="tab-content pt-2" id="borderedTabContent">
+            <div class="tab-pane fade active show" id="{{month.month}}-oport" role="tabpanel"
+              aria-labelledby="{{month.month}}-oport-tab">
+              <div class="container p-2">
+                <div class="row pt-2 align-items-center">
+                  <!-- Goal column -->
+                  <div id="goal-col" class="col-4 border-end">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-trophy"></i>
+                    </div>
+                    <div id="goal-div" class="row align-items-center pb-1 pe-1" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="goal-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.opt_goal}}</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-goal-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="opt_goal"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit goal form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-goal-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_goal" type="number" class="edit-current form-control text-center"
+                          value="{{month.opt_goal}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="opt_goal"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Meta
+                    </div>
+                  </div>
+                  <!-- Excecuted column -->
+                  <div id="exec-col" class="col-4 border-end pe-3">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-check-circle"></i>
+                    </div>
+                    <div id="exec-div" class="row align-items-center pb-1 pe-1" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="exec-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.opt_current}}</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-exec-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="opt_current"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit exec form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-exec-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_current" type="number" class="edit-current form-control text-center"
+                          value="{{month.opt_current}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="opt_current"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Ejecutado
+                    </div>
+                  </div>
+                  <!-- Progress column -->
+                  <div class="col-4">
+                    <div class="progress-circle" id="progress-circle">
+                      <svg viewBox="0 0 100 100">
+                        <circle class="progress-path" cx="50" cy="50" r="40" stroke="#ddd" stroke-width="8" fill="none">
+                        </circle>
+                        <circle class="progress-fill" cx="50" cy="50" r="40" stroke="#333" stroke-width="8" fill="none"
+                          stroke-dasharray="125.66370614359177, 125.66370614359177" stroke-dashoffset="0"></circle>
+                      </svg>
+                      <span class="percentage-text"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="{{month.month}}-ventas" role="tabpanel"
+              aria-labelledby="{{month.month}}-ventas-tab">
+              <div class="container p-2">
+                <div class="row pt-2 align-items-center">
+                  <!-- Goal column -->
+                  <div id="goal-col" class="col-4 border-end">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-trophy"></i>
+                    </div>
+                    <div id="goal-div" class="row align-items-center pb-1 pe-1" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="goal-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.sales_goal}}</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-goal-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="sales_goal"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit goal form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-goal-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_goal" type="number" class="edit-current form-control text-center"
+                          value="{{month.sales_goal}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="sales_goal"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Meta
+                    </div>
+                  </div>
+                  <!-- Excecuted column -->
+                  <div id="exec-col" class="col-4 border-end pe-3">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-check-circle"></i>
+                    </div>
+                    <!-- Exec div -->
+                    <div id="exec-div" class="row align-items-center" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="exec-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.sales_current}}</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-exec-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="sales_current"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-exec-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_current" type="number" class="edit-current form-control text-center"
+                          value="{{month.sales_current}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="sales_current"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Ejecutado
+                    </div>
+                  </div>
+                  <!-- Progress column -->
+                  <div class="col-4">
+                    <div class="progress-circle" id="progress-circle">
+                      <svg viewBox="0 0 100 100">
+                        <circle class="progress-path" cx="50" cy="50" r="40" stroke="#ddd" stroke-width="8" fill="none">
+                        </circle>
+                        <circle class="progress-fill" cx="50" cy="50" r="40" stroke="#333" stroke-width="8" fill="none"
+                          stroke-dasharray="125.66370614359177, 125.66370614359177" stroke-dashoffset="0"></circle>
+                      </svg>
+                      <span class="percentage-text"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="{{month.month}}-fact" role="tabpanel"
+              aria-labelledby="{{month.month}}-fact-tab">
+              <div class="container p-2">
+                <div class="row pt-2 align-items-center">
+                  <!-- Goal column -->
+                  <div id="goal-col" class="col-4 border-end">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-trophy"></i>
+                    </div>
+                    <div id="goal-div" class="row align-items-center pb-1 pe-1" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="goal-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.fact_goal}}</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-goal-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="fact_goal"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit goal form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-goal-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_goal" type="number" class="edit-current form-control text-center"
+                          value="{{month.fact_goal}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="fact_goal"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Meta
+                    </div>
+                  </div>
+                  <!-- Excecuted column -->
+                  <div id="exec-col" class="col-4 border-end pe-3">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-check-circle"></i>
+                    </div>
+                    <!-- Exec div -->
+                    <div id="exec-div" class="row align-items-center" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="exec-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.fact_current}}</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-exec-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="fact_current"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-exec-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_current" type="number" class="edit-current form-control text-center"
+                          value="{{month.fact_current}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="fact_current"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Ejecutado
+                    </div>
+                  </div>
+                  <!-- Progress column -->
+                  <div class="col-4">
+                    <div class="progress-circle" id="progress-circle">
+                      <svg viewBox="0 0 100 100">
+                        <circle class="progress-path" cx="50" cy="50" r="40" stroke="#ddd" stroke-width="8" fill="none">
+                        </circle>
+                        <circle class="progress-fill" cx="50" cy="50" r="40" stroke="#333" stroke-width="8" fill="none"
+                          stroke-dasharray="125.66370614359177, 125.66370614359177" stroke-dashoffset="0"></circle>
+                      </svg>
+                      <span class="percentage-text"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="{{month.month}}-efect" role="tabpanel" data-field="efect" aria-labelledby="{{month.month}}-efect-tab">
+              <div class="container p-2">
+                <div class="row pt-2 align-items-center">
+                  <!-- Goal column -->
+                  <div id="goal-col" class="col-4 border-end">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-trophy"></i>
+                    </div>
+                    <div id="goal-div" class="row align-items-center pb-1 pe-1" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="goal-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.efect_goal}}</span><span>%</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-goal-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="efect_goal"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit goal form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-goal-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_goal" type="number" class="edit-current form-control text-center"
+                          value="{{month.efect_goal}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="efect_goal"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Meta
+                    </div>
+                  </div>
+
+                  <div id="exec-col" class="col-4 border-end pe-3">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-check-circle"></i>
+                    </div>
+                    <!-- Exec div -->
+                    <div id="exec-div" class="row align-items-center" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="exec-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.efect_current}}</span><span>%</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button hidden id="edit-exec-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="efect_current"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-exec-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_current" type="number" class="edit-current form-control text-center"
+                          value="{{month.efect_current}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="efect_current"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Ejecutado
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div id="canvas-holder" style="width:100%">
+                      <canvas id="{{month.month}}-chart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="{{month.month}}-td" role="tabpanel" aria-labelledby="{{month.month}}-td-tab">
+              <div class="container p-2">
+                <div class="row pt-2 align-items-center">
+                  <!-- Goal column -->
+                  <div id="goal-col" class="col-4 border-end">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-trophy"></i>
+                    </div>
+                    <div id="goal-div" class="row align-items-center pb-1 pe-1" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="goal-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.td_goal}}</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-goal-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="td_goal"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit goal form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-goal-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_goal" type="number" class="edit-current form-control text-center"
+                          value="{{month.td_goal}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="td_goal"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Meta
+                    </div>
+                  </div>
+
+                  <div id="exec-col" class="col-4 border-end pe-3">
+                    <div class="goal-logo p-2 text-center">
+                      <i class="bi-check-circle"></i>
+                    </div>
+                    <!-- Exec div -->
+                    <div id="exec-div" class="row align-items-center" style="display:flex">
+                      <div class="col-4"></div>
+                      <div id="exec-number" class="col-4 goal-number pt-1 text-center">
+                        <span id="num-span">{{month.td_current}}</span>
+                      </div>
+                      <div class="col-4 text-start">
+                        <button id="edit-exec-btn" type="button" class="icon-button" data-month="{{month.id}}"
+                          data-field="td_current"><i class="bi-pencil-square"></i></button>
+                      </div>
+                    </div>
+                    <!-- Edit form -->
+                    <form class="row align-items-center pb-1 pe-1" style="display:none" id="edit-exec-form"
+                      method="post">
+                      <div class="col-9 pt-1 text-center ps-4 pe-0 mx-0">
+                        {% csrf_token %}
+                        <input name="new_current" type="number" class="edit-current form-control text-center"
+                          value="{{month.td_current}}">
+                      </div>
+                      <div class="col-3 mx-0 pe-0 ps-1">
+                        <button id="submit-btn" type="submit" class="icon-button" data-month="{{month.id}}"
+                          data-field="td_current"><i style="color:#29ec31" class="bi-check-square-fill"></i></button>
+                      </div>
+                    </form>
+                    <div class="goal-label text-center">
+                      Ejecutado
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="progress-circle" id="progress-circle">
+                      <svg viewBox="0 0 100 100">
+                        <circle class="progress-path" cx="50" cy="50" r="40" stroke="#ddd" stroke-width="8" fill="none">
+                        </circle>
+                        <circle class="progress-fill" cx="50" cy="50" r="40" stroke="#333" stroke-width="8" fill="none"
+                          stroke-dasharray="125.66370614359177, 125.66370614359177" stroke-dashoffset="0"></circle>
+                      </svg>
+                      <span class="percentage-text"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+
+<div class="container p-3" style="margin-top:80px;">
+  <div class="row year-row" id="year-row">
+    <div class="col-12 col-md-6">
+      <div class="card year info-card customers-card" id="year-card">
+        <div class="card-body">
+
+          <h5 class="card-title ps-3 d-flex align-items-center"><i class="bi-calendar-week pe-2"></i>Inicio</h5>
+          <div class="container align-items-center">
+            <div class="row p-3 year-row" style="color:gray">
+              Inicie creando un nuevo año.
+            </div>
+            <div class="row pt-2 mt-3 year-row">
+              <a href="{% url 'new_year' %}">
+                <button type="button" style="background-color: #0eb90e; color:white;">Crear año</button>
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
